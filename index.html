@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Credit Risk Scoring | Kayalvizhi S</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
+  h1 { color: #1a237e; font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 28px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  label { font-size: 12px; color: #444; font-weight: 600; display: block; margin-bottom: 4px; }
+  input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border 0.2s; }
+  input:focus { outline: none; border-color: #1a237e; }
+  button { width: 100%; margin-top: 24px; padding: 14px; background: #1a237e; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  button:hover { background: #283593; }
+  .result { margin-top: 24px; padding: 20px; border-radius: 8px; display: none; }
+  .result.low { background: #e8f5e9; border-left: 4px solid #2e7d32; }
+  .result.medium { background: #fff8e1; border-left: 4px solid #f57f17; }
+  .result.high { background: #ffebee; border-left: 4px solid #c62828; }
+  .score { font-size: 42px; font-weight: 700; }
+  .low .score { color: #2e7d32; }
+  .medium .score { color: #f57f17; }
+  .high .score { color: #c62828; }
+  .label { font-size: 13px; color: #666; margin-bottom: 8px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-top: 8px; }
+  .low .badge { background: #2e7d32; color: white; }
+  .medium .badge { background: #f57f17; color: white; }
+  .high .badge { background: #c62828; color: white; }
+  .prob { font-size: 14px; margin-top: 10px; color: #333; }
+  .loading { display: none; text-align: center; color: #666; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Credit Risk Scoring System</h1>
+  <p class="subtitle">Built by Kayalvizhi S | M.S. FinTech, SRM Institute | Powered by XGBoost</p>
+
+  <div class="grid">
+    <div>
+      <label>Credit Utilization (0-1)</label>
+      <input type="number" id="RevolvingUtilizationOfUnsecuredLines" step="0.01" min="0" max="1" placeholder="e.g. 0.76" value="0.76">
+    </div>
+    <div>
+      <label>Age</label>
+      <input type="number" id="age" placeholder="e.g. 45" value="45">
+    </div>
+    <div>
+      <label>30-59 Days Late (count)</label>
+      <input type="number" id="NumberOfTime30_59DaysPastDueNotWorse" placeholder="e.g. 2" value="2">
+    </div>
+    <div>
+      <label>Debt Ratio (0-1)</label>
+      <input type="number" id="DebtRatio" step="0.01" placeholder="e.g. 0.80" value="0.80">
+    </div>
+    <div>
+      <label>Monthly Income ($)</label>
+      <input type="number" id="MonthlyIncome" placeholder="e.g. 4500" value="4500">
+    </div>
+    <div>
+      <label>Open Credit Lines</label>
+      <input type="number" id="NumberOfOpenCreditLinesAndLoans" placeholder="e.g. 8" value="8">
+    </div>
+    <div>
+      <label>90+ Days Late (count)</label>
+      <input type="number" id="NumberOfTimes90DaysLate" placeholder="e.g. 0" value="0">
+    </div>
+    <div>
+      <label>Real Estate Loans</label>
+      <input type="number" id="NumberRealEstateLoansOrLines" placeholder="e.g. 1" value="1">
+    </div>
+    <div>
+      <label>60-89 Days Late (count)</label>
+      <input type="number" id="NumberOfTime60_89DaysPastDueNotWorse" placeholder="e.g. 0" value="0">
+    </div>
+    <div>
+      <label>Dependents</label>
+      <input type="number" id="NumberOfDependents" placeholder="e.g. 2" value="2">
+    </div>
+  </div>
+
+  <button onclick="scoreApplicant()">Calculate Risk Score</button>
+  <div class="loading" id="loading">Analysing applicant data...</div>
+
+  <div class="result" id="result">
+    <div class="label">Credit Risk Score</div>
+    <div class="score" id="score">—</div>
+    <div class="prob" id="prob">—</div>
+    <div><span class="badge" id="badge">—</span></div>
+  </div>
+</div>
+
+<script>
+async function scoreApplicant() {
+  const btn = document.querySelector('button');
+  const loading = document.getElementById('loading');
+  const resultDiv = document.getElementById('result');
+
+  btn.disabled = true;
+  loading.style.display = 'block';
+  resultDiv.style.display = 'none';
+
+  const payload = {
+    RevolvingUtilizationOfUnsecuredLines: parseFloat(document.getElementById('RevolvingUtilizationOfUnsecuredLines').value),
+    age: parseInt(document.getElementById('age').value),
+    NumberOfTime30_59DaysPastDueNotWorse: parseInt(document.getElementById('NumberOfTime30_59DaysPastDueNotWorse').value),
+    DebtRatio: parseFloat(document.getElementById('DebtRatio').value),
+    MonthlyIncome: parseFloat(document.getElementById('MonthlyIncome').value),
+    NumberOfOpenCreditLinesAndLoans: parseInt(document.getElementById('NumberOfOpenCreditLinesAndLoans').value),
+    NumberOfTimes90DaysLate: parseInt(document.getElementById('NumberOfTimes90DaysLate').value),
+    NumberRealEstateLoansOrLines: parseInt(document.getElementById('NumberRealEstateLoansOrLines').value),
+    NumberOfTime60_89DaysPastDueNotWorse: parseInt(document.getElementById('NumberOfTime60_89DaysPastDueNotWorse').value),
+    NumberOfDependents: parseInt(document.getElementById('NumberOfDependents').value)
+  };
+
+  try {
+    const response = await fetch('http://127.0.0.1:8000/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+
+    document.getElementById('score').textContent = data.risk_score;
+    document.getElementById('prob').textContent = `Default Probability: ${data.default_probability}%`;
+    document.getElementById('badge').textContent = `${data.risk_category} — ${data.recommendation}`;
+
+    const category = data.risk_category.split(' ')[0].toLowerCase();
+    resultDiv.className = `result ${category}`;
+    resultDiv.style.display = 'block';
+  } catch (e) {
+    alert('API error — make sure uvicorn is running');
+  }
+
+  btn.disabled = false;
+  loading.style.display = 'none';
+}
+</script>
+</body>
+</html>
