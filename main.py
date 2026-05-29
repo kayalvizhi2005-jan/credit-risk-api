@@ -38,15 +38,7 @@ class ApplicantData(BaseModel):
 
 @app.get("/")
 def home():
-    return {
-        "message": "Credit Risk Scoring API is live",
-        "author": "Kayalvizhi S | M.S. FinTech, SRM",
-        "endpoints": {
-            "health": "/health",
-            "predict": "/predict",
-            "docs": "/docs"
-        }
-    }
+    return FileResponse("index.html")
 
 @app.get("/health")
 def health():
