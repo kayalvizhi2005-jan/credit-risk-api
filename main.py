@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import joblib
 import numpy as np
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 # Load model
 model = joblib.load('credit_risk_model.pkl')
@@ -86,3 +88,11 @@ def predict(data: ApplicantData):
         "score_range": "150-850 (higher is better)",
         "model": "XGBoost | Trained on 150,000 borrower records"
     }
+
+@app.get("/health")
+def health():
+    return {"status": "healthy", "model": "XGBoost Credit Risk Model v1.0"}
+
+@app.get("/dashboard")
+def dashboard():
+    return FileResponse("index.html")
